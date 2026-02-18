@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Meeting Planner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+    <h1>Meeting Planner</h1>
+
+    <div class="create-event">
+        <input type="text" id="eventTitle" placeholder="Name of event">
+        <input type="text" id="participantName" placeholder="Your name">
+        <input type="datetime-local" id="dateInput">
+        <button id="addDateBtn">Add date</button>
+        <button id="createEventBtn">Create event</button>
+    </div>
+
+    <div id="datesList"></div>
+
+    <div id="pollSection" class="hidden">
+        <h2 id="pollTitle"></h2>
+        <table id="pollTable"></table>
+    </div>
+
+</div>
+
+<script>
+    const addDateBtn = document.getElementById("addDateBtn");
+const createEventBtn = document.getElementById("createEventBtn");
+const dateInput = document.getElementById("dateInput");
+const datesList = document.getElementById("datesList");
+const pollSection = document.getElementById("pollSection");
+const pollTable = document.getElementById("pollTable");
+const pollTitle = document.getElementById("pollTitle");
+
+let dates = [];
+let votes = {};
+
+addDateBtn.addEventListener("click", () => {
+    const dateValue = dateInput.value;
+    if (!dateValue) return;
+
+    dates.push(dateValue);
+    const div = document.createElement("div");
+    div.className = "date-item";
+    div.textContent = new Date(dateValue).toLocaleString();
+    datesList.appendChild(div);
+
+    dateInput.value = "";
+});
+
+createEventBtn.addEventListener("click", () => {
+    const title = document.getElementById("eventTitle").value;
+    if (!title || dates.length === 0) return;
+
+    pollTitle.textContent = title;
+    pollSection.classList.remove("hidden");
+
+    renderTable();
+});
+
+function renderTable() {
+    pollTable.innerHTML = "";
+
+    const headerRow = document.createElement("tr");
+    headerRow.innerHTML = "<th>Participant</th>" +
+        dates.map(d => `<th>${new Date(d).toLocaleString()}</th>`).join("");
+    pollTable.appendChild(headerRow);
+
+    const inputRow = document.createElement("tr");
+
+    const nameCell = document.createElement("td");
+    const nameInput = document.createElement("input");
+    nameInput.placeholder = "Name";
+    nameCell.appendChild(nameInput);
+    inputRow.appendChild(nameCell);
+
+    dates.forEach(date => {
+        const td = document.createElement("td");
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        td.appendChild(checkbox);
+        inputRow.appendChild(td);
+    });
+
+    const voteBtn = document.createElement("button");
+    voteBtn.textContent = "Vote";
+
+    voteBtn.addEventListener("click", () => {
+        const name = nameInput.value;
+        if (!name) return;
+
+        votes[name] = [];
+
+        const checkboxes = inputRow.querySelectorAll("input[type='checkbox']");
+        checkboxes.forEach((cb, index) => {
+            if (cb.checked) {
+                votes[name].push(dates[index]);
+            }
+        });
+
+        renderResults();
+    });
+
+    const voteCell = document.createElement("td");
+    voteCell.appendChild(voteBtn);
+    inputRow.appendChild(voteCell);
+
+    pollTable.appendChild(inputRow);
+}
+
+function renderResults() {
+    const resultsRow = document.createElement("tr");
+    resultsRow.innerHTML = "<td><b>Голоса</b></td>";
+
+    dates.forEach(date => {
+        let count = 0;
+        for (let user in votes) {
+            if (votes[user].includes(date)) count++;
+        }
+        resultsRow.innerHTML += `<td><b>${count}</b></td>`;
+    });
+
+    pollTable.appendChild(resultsRow);
+}
+</script>
+</body>
+</html>
