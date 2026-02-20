@@ -160,6 +160,8 @@
             // =====================
 
             createEventBtn.addEventListener("click", () => {
+                console.log("Button clicked");
+                console.log("SDK status:", sdk.status);
                 const title = document.getElementById("eventTitle").value;
                 if (!title || dates.length === 0) return;
 
