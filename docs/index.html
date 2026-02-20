@@ -13,8 +13,19 @@
 
     <div class="create-event">
         <input type="text" id="eventTitle" placeholder="Name of event">
-        <input type="text" id="participantName" placeholder="Your name">
-        <input type="datetime-local" id="dateInput">
+        <input type="datetime-local" id="dateInputStart">
+
+        <select id="durationSelect">
+            <option value="15">15 min</option>
+            <option value="30">30 min</option>
+            <option value="45">45 min</option>
+            <option value="60">1 heure</option>
+            <option value="120">2 heures</option>
+            <option value="180">3 heures</option>
+            <option value="240">4 heures</option>
+            <option value="allday">Toute la journée</option>
+        </select>
+
         <button id="addDateBtn">Add date</button>
         <button id="createEventBtn">Create event</button>
     </div>
@@ -30,103 +41,158 @@
 
 <script>
     const addDateBtn = document.getElementById("addDateBtn");
-const createEventBtn = document.getElementById("createEventBtn");
-const dateInput = document.getElementById("dateInput");
-const datesList = document.getElementById("datesList");
-const pollSection = document.getElementById("pollSection");
-const pollTable = document.getElementById("pollTable");
-const pollTitle = document.getElementById("pollTitle");
+    const createEventBtn = document.getElementById("createEventBtn");
+    const dateInputStart = document.getElementById("dateInputStart");
+    const durationSelect = document.getElementById("durationSelect");
+    const datesList = document.getElementById("datesList");
+    const pollSection = document.getElementById("pollSection");
+    const pollTable = document.getElementById("pollTable");
+    const pollTitle = document.getElementById("pollTitle");
 
-let dates = [];
-let votes = {};
+    let dates = [];
+    let votes = {};
 
-addDateBtn.addEventListener("click", () => {
-    const dateValue = dateInput.value;
-    if (!dateValue) return;
+    const optionsDate = {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric"
+    };
 
-    dates.push(dateValue);
-    const div = document.createElement("div");
-    div.className = "date-item";
-    div.textContent = new Date(dateValue).toLocaleString();
-    datesList.appendChild(div);
+    const optionsDateTime = {
+        ...optionsDate,
+        hour: "2-digit",
+        minute: "2-digit"
+    };
 
-    dateInput.value = "";
-});
+    addDateBtn.addEventListener("click", () => {
+        const startValue = dateInputStart.value;
+        const durationValue = durationSelect.value;
 
-createEventBtn.addEventListener("click", () => {
-    const title = document.getElementById("eventTitle").value;
-    if (!title || dates.length === 0) return;
+        if (!startValue) return;
 
-    pollTitle.textContent = title;
-    pollSection.classList.remove("hidden");
+        const startDate = new Date(startValue);
 
-    renderTable();
-});
+        const isAllDay = durationValue === "allday";
 
-function renderTable() {
-    pollTable.innerHTML = "";
+        const dateObject = {
+            start: startDate,
+            duration: durationValue,
+            allDay: isAllDay
+        };
 
-    const headerRow = document.createElement("tr");
-    headerRow.innerHTML = "<th>Participant</th>" +
-        dates.map(d => `<th>${new Date(d).toLocaleString()}</th>`).join("");
-    pollTable.appendChild(headerRow);
+        dates.push(dateObject);
 
-    const inputRow = document.createElement("tr");
+        const div = document.createElement("div");
+        div.className = "date-item";
 
-    const nameCell = document.createElement("td");
-    const nameInput = document.createElement("input");
-    nameInput.placeholder = "Name";
-    nameCell.appendChild(nameInput);
-    inputRow.appendChild(nameCell);
+        if (isAllDay) {
+            div.textContent = startDate.toLocaleDateString(undefined, optionsDate) + " (Toute la journée)";
+        } else {
+            div.textContent =
+                startDate.toLocaleString(undefined, optionsDateTime) +
+                " (" + durationValue + " min)";
+        }
 
-    dates.forEach(date => {
-        const td = document.createElement("td");
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        td.appendChild(checkbox);
-        inputRow.appendChild(td);
+        datesList.appendChild(div);
+
+        dateInputStart.value = "";
     });
 
-    const voteBtn = document.createElement("button");
-    voteBtn.textContent = "Vote";
+    createEventBtn.addEventListener("click", () => {
+        const title = document.getElementById("eventTitle").value;
+        if (!title || dates.length === 0) return;
 
-    voteBtn.addEventListener("click", () => {
-        const name = nameInput.value;
-        if (!name) return;
+        pollTitle.textContent = title;
+        pollSection.classList.remove("hidden");
 
-        votes[name] = [];
+        renderTable();
+    });
 
-        const checkboxes = inputRow.querySelectorAll("input[type='checkbox']");
-        checkboxes.forEach((cb, index) => {
-            if (cb.checked) {
-                votes[name].push(dates[index]);
+    function renderTable() {
+        pollTable.innerHTML = "";
+
+        const headerRow = document.createElement("tr");
+        headerRow.innerHTML = "<th>Participant</th>";
+
+        dates.forEach(date => {
+            let formatted;
+
+            if (date.allDay) {
+                formatted =
+                    date.start.toLocaleDateString(undefined, optionsDate) +
+                    "<br><small>Toute la journée</small>";
+            } else {
+                formatted =
+                    date.start.toLocaleString(undefined, optionsDateTime) +
+                    "<br><small>" + date.duration + " min</small>";
             }
+
+            headerRow.innerHTML += `<th>${formatted}</th>`;
         });
 
-        renderResults();
-    });
+        pollTable.appendChild(headerRow);
 
-    const voteCell = document.createElement("td");
-    voteCell.appendChild(voteBtn);
-    inputRow.appendChild(voteCell);
+        const inputRow = document.createElement("tr");
 
-    pollTable.appendChild(inputRow);
-}
+        const nameCell = document.createElement("td");
+        const nameInput = document.createElement("input");
+        nameInput.placeholder = "Name";
+        nameCell.appendChild(nameInput);
+        inputRow.appendChild(nameCell);
 
-function renderResults() {
-    const resultsRow = document.createElement("tr");
-    resultsRow.innerHTML = "<td><b>Голоса</b></td>";
+        dates.forEach(() => {
+            const td = document.createElement("td");
+            const checkbox = document.createElement("input");
+            checkbox.type = "checkbox";
+            td.appendChild(checkbox);
+            inputRow.appendChild(td);
+        });
 
-    dates.forEach(date => {
-        let count = 0;
-        for (let user in votes) {
-            if (votes[user].includes(date)) count++;
-        }
-        resultsRow.innerHTML += `<td><b>${count}</b></td>`;
-    });
+        const voteBtn = document.createElement("button");
+        voteBtn.textContent = "Vote";
 
-    pollTable.appendChild(resultsRow);
-}
+        voteBtn.addEventListener("click", () => {
+            const name = nameInput.value;
+            if (!name) return;
+
+            votes[name] = [];
+
+            const checkboxes = inputRow.querySelectorAll("input[type='checkbox']");
+            checkboxes.forEach((cb, index) => {
+                if (cb.checked) {
+                    votes[name].push(index);
+                }
+            });
+
+            renderResults();
+        });
+
+        const voteCell = document.createElement("td");
+        voteCell.appendChild(voteBtn);
+        inputRow.appendChild(voteCell);
+
+        pollTable.appendChild(inputRow);
+    }
+
+    function renderResults() {
+        const existingResults = document.getElementById("resultsRow");
+        if (existingResults) existingResults.remove();
+
+        const resultsRow = document.createElement("tr");
+        resultsRow.id = "resultsRow";
+        resultsRow.innerHTML = "<td><b>Votes</b></td>";
+
+        dates.forEach((_, index) => {
+            let count = 0;
+            for (let user in votes) {
+                if (votes[user].includes(index)) count++;
+            }
+            resultsRow.innerHTML += `<td><b>${count}</b></td>`;
+        });
+
+        pollTable.appendChild(resultsRow);
+    }
 </script>
 </body>
 </html>
