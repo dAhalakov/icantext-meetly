@@ -81,3 +81,15 @@ th {
     background: #4a90e2;
     color: white;
 }
+
+#standalone-info {
+    display: none;
+    background: #05038c;
+    max-width: 400px;
+    color: #ccc;
+    padding: 20px;
+    border: 1px solid #333;
+    border-radius: 12px;
+    line-height: 1.5;
+    cursor: default;
+}

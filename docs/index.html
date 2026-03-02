@@ -7,7 +7,7 @@
     </head>
     <body>
 
-        <div class="app">
+        <div class="app" style="display:none;" id="app">
 
             <h1>Meeting Planner</h1>
 
@@ -40,6 +40,10 @@
 
         </div>
 
+        <div id="standalone-info">
+            <h2 style="color:#fff;">Meetly Micro-App</h2>
+        </div>
+
         <script src="https://icantext.com/ICTBridgeSDK.js"></script>
         <script>
 
@@ -55,8 +59,13 @@
                 connection = await sdk.init();
 
                 if (connection.status === "READY") {
+                    document.getElementById('app').style.display = 'block';
                     localUser = connection.localPseudonym;
                     console.log("Connected as:", localUser);
+                }
+                if (connection.status !== 'READY') {
+                    document.getElementById('standalone-info').style.display = 'block';
+                    return;
                 }
             }
 
