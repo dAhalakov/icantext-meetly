@@ -42,300 +42,177 @@
 
         <div id="standalone-info">
             <h2 style="color:#fff;">Meetly Micro-App</h2>
+            <p>Sondages à choix multiples : Pour voter sur des options (restaurant, priorité de projet) avec mise à jour des barres de progression en temps réel.</p> 
+            <p>To use it, install it in a channel or launch it with the command:</p>
+            <code>/app https://dahalakov.github.io/icantext-test/</code>
         </div>
 
         <script src="https://icantext.com/ICTBridgeSDK.js"></script>
         <script>
+            const sdk = new ICTBridgeSDK("meetly_app");
 
-            // =====================
-            // SDK INITIALIZATION
-            // =====================
-
-            const sdk = new ICTBridgeSDK("icantext_meetly_app");
             let connection;
-            let localUser = null;
+            let localPeerId;
 
-            async function initApp() {
+            async function init(){
                 connection = await sdk.init();
-
-                if (connection.status === "READY") {
-                    document.getElementById('app').style.display = 'block';
-                    localUser = connection.localPseudonym;
-                    console.log("Connected as:", localUser);
-                }
-                if (connection.status !== 'READY') {
-                    document.getElementById('standalone-info').style.display = 'block';
+                if(connection.status === "STANDALONE"){
+                    document.getElementById("creator").style.display="none";
                     return;
                 }
-            }
-
-            initApp();
-
-            // =====================
-            // DOM REFERENCES
-            // =====================
-
-            const addDateBtn = document.getElementById("addDateBtn");
-            const createEventBtn = document.getElementById("createEventBtn");
-            const dateInputStart = document.getElementById("dateInputStart");
-            const durationSelect = document.getElementById("durationSelect");
-            const datesList = document.getElementById("datesList");
-            const pollSection = document.getElementById("pollSection");
-            const pollTable = document.getElementById("pollTable");
-            const pollTitle = document.getElementById("pollTitle");
-
-            // =====================
-            // STATE
-            // =====================
-
-            let dates = [];
-            let votes = {};
-            let eventDuration = null;
-            let currentEvent = null;
-
-            // =====================
-            // DATE FORMATTING
-            // =====================
-
-            const optionsDate = {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric"
-            };
-
-            const optionsDateTime = {
-                ...optionsDate,
-                hour: "2-digit",
-                minute: "2-digit"
-            };
-
-            // =====================
-            // ADD DATE
-            // =====================
-
-            addDateBtn.addEventListener("click", () => {
-                const startValue = dateInputStart.value;
-                if (!startValue) return;
-
-                if (!eventDuration) {
-                    eventDuration = durationSelect.value;
-                    durationSelect.disabled = true;
+                localPeerId = connection.localPeerId;
+                const mode = sdk.getDisplayMode();
+                if(mode === "MESSAGE"){
+                    startPoll();
+                }else{
+                    startCreator();
                 }
-
-                const startDate = new Date(startValue);
-                dates.push(startDate);
-
-                renderDatesList();
-                dateInputStart.value = "";
-            });
-
-            function renderDatesList() {
-                datesList.innerHTML = "";
-
-                dates.forEach((date, index) => {
-                    const div = document.createElement("div");
-                    div.className = "date-item";
-
-                    let text;
-
-                    if (eventDuration === "allday") {
-                        text = date.toLocaleDateString(undefined, optionsDate) + " (All day)";
-                    } else {
-                        text = date.toLocaleString(undefined, optionsDateTime) +
-                               " (" + eventDuration + " min)";
-                    }
-
-                    div.innerHTML = text +
-                        `<button onclick="removeDate(${index})" style="margin-left:10px;background:#e74c3c;">X</button>`;
-
-                    datesList.appendChild(div);
-                });
             }
+            init();
 
-            function removeDate(index) {
-                dates.splice(index, 1);
 
-                if (dates.length === 0) {
-                    durationSelect.disabled = false;
-                    eventDuration = null;
-                }
+            let dates=[];
 
-                renderDatesList();
-            }
+            function startCreator(){
+                document.getElementById("standalone").style.display="none";
+                const addBtn = document.getElementById("addDate");
+                const createBtn = document.getElementById("create");
+                const datesDiv = document.getElementById("dates");
 
-            // =====================
-            // CREATE EVENT
-            // =====================
-
-            createEventBtn.addEventListener("click", () => {
-                console.log("Button clicked");
-                console.log("SDK status:", sdk.status);
-                const title = document.getElementById("eventTitle").value;
-                if (!title || dates.length === 0) return;
-
-                const eventData = {
-                    id: Date.now().toString(),
-                    title,
-                    dates,
-                    duration: eventDuration,
-                    votes: {}
+                addBtn.onclick=()=>{
+                    const val=document.getElementById("dateInput").value;
+                    if(!val)return;
+                    dates.push(val);
+                    renderDates();
                 };
 
-                currentEvent = eventData;
-
-                sdk.sendData(JSON.stringify({
-                    type: "EVENT_CREATED",
-                    payload: eventData
-                }));
-            });
-
-            // =====================
-            // RECEIVE DATA
-            // =====================
-
-            sdk.onData((from, payload) => {
-                const message = JSON.parse(payload);
-
-                if (message.type === "EVENT_CREATED") {
-                    currentEvent = message.payload;
-                    dates = currentEvent.dates.map(d => new Date(d));
-                    eventDuration = currentEvent.duration;
-                    votes = currentEvent.votes || {};
-
-                    pollTitle.textContent = currentEvent.title;
-                    pollSection.classList.remove("hidden");
-
-                    renderTable();
-                }
-
-                if (message.type === "VOTE_UPDATE") {
-                    if (currentEvent && message.payload.eventId === currentEvent.id) {
-                        votes = message.payload.votes;
-                        renderTable();
-                    }
-                }
-            });
-
-            // =====================
-            // RENDER TABLE
-            // =====================
-
-            function renderTable() {
-                pollTable.innerHTML = "";
-
-                const headerRow = document.createElement("tr");
-                headerRow.innerHTML = "<th>Participant</th>";
-
-                dates.forEach(date => {
-                    let formatted;
-
-                    if (eventDuration === "allday") {
-                        formatted = date.toLocaleDateString(undefined, optionsDate) +
-                                    "<br><small>All day</small>";
-                    } else {
-                        formatted = date.toLocaleString(undefined, optionsDateTime) +
-                                    "<br><small>" + eventDuration + " min</small>";
-                    }
-
-                    headerRow.innerHTML += `<th>${formatted}</th>`;
-                });
-
-                pollTable.appendChild(headerRow);
-
-                const inputRow = document.createElement("tr");
-
-                const nameCell = document.createElement("td");
-                nameCell.textContent = localUser;
-                inputRow.appendChild(nameCell);
-
-                const hasVoted = votes[localUser];
-
-                dates.forEach((_, index) => {
-                    const td = document.createElement("td");
-                    const checkbox = document.createElement("input");
-                    checkbox.type = "checkbox";
-
-                    if (hasVoted) {
-                        checkbox.checked = votes[localUser].includes(index);
-                        checkbox.disabled = true;
-                    }
-
-                    td.appendChild(checkbox);
-                    inputRow.appendChild(td);
-                });
-
-                const voteCell = document.createElement("td");
-
-                if (!hasVoted) {
-                    const voteBtn = document.createElement("button");
-                    voteBtn.textContent = "Vote";
-
-                    voteBtn.addEventListener("click", () => {
-
-                        votes[localUser] = [];
-
-                        const checkboxes = inputRow.querySelectorAll("input[type='checkbox']");
-                        checkboxes.forEach((cb, index) => {
-                            if (cb.checked) {
-                                votes[localUser].push(index);
-                            }
-                        });
-
-                        sdk.sendData(JSON.stringify({
-                            type: "VOTE_UPDATE",
-                            payload: {
-                                eventId: currentEvent.id,
-                                votes
-                            }
-                        }));
+                function renderDates(){
+                    datesDiv.innerHTML="";
+                    dates.forEach((d,i)=>{
+                    const div=document.createElement("div");
+                    div.innerHTML=d+" <button onclick='removeDate("+i+")'>X</button>";
+                    datesDiv.appendChild(div);
                     });
-
-                    voteCell.appendChild(voteBtn);
-                } else {
-                    const removeBtn = document.createElement("button");
-                    removeBtn.textContent = "Remove vote";
-
-                    removeBtn.addEventListener("click", () => {
-                        delete votes[localUser];
-
-                        sdk.sendData(JSON.stringify({
-                            type: "VOTE_UPDATE",
-                            payload: {
-                                eventId: currentEvent.id,
-                                votes
-                            }
-                        }));
-                    });
-
-                    voteCell.appendChild(removeBtn);
                 }
 
-                inputRow.appendChild(voteCell);
-                pollTable.appendChild(inputRow);
+                window.removeDate=function(i){
+                    dates.splice(i,1);
+                    renderDates();
+                };
 
-                renderResults();
+                createBtn.onclick=async()=>{
+                    const title=document.getElementById("title").value;
+                    const duration=document.getElementById("duration").value;
+                    if(!title||dates.length===0)return;
+                    await sdk.postAppContent(
+                        window.location.href,
+                        {
+                            title:title,
+                            dates:dates,
+                            duration:duration
+                        },
+                        {
+                            interactionModel:'OWNER_ONLY'
+                        }
+                    );
+                };  
             }
 
-            // =====================
-            // RENDER RESULTS
-            // =====================
 
-            function renderResults() {
-                const resultsRow = document.createElement("tr");
-                resultsRow.innerHTML = "<td><b>Votes</b></td>";
+            let context;
+            let votes={};
 
-                dates.forEach((_, index) => {
-                    let count = 0;
+            async function startPoll(){
+                document.getElementById("creator").style.display="none";
+                document.getElementById("poll").style.display="block";
+                document.getElementById("standalone").style.display="none";
+                context = await sdk.getAppContext();
+                document.getElementById("pollTitle").innerText=context.title;
+                const history = await sdk.getAppEvents();
+                history.forEach(e=>{
+                    votes[e.senderId]=e.data.vote;
+                });
+                render();
+                // listen real-time votes
+                sdk.onAppEvent((senderId,data)=>{
+                    votes[senderId]=data.vote;
+                    render();
+                });
+            }
 
-                    for (let user in votes) {
-                        if (votes[user].includes(index)) count++;
-                    }
 
-                    resultsRow.innerHTML += `<td><b>${count}</b></td>`;
+            function render(){
+                const table=document.getElementById("table");
+                table.innerHTML="";
+                const header=document.createElement("tr");
+                header.innerHTML="<th>User</th>";
+                context.dates.forEach(d=>{
+                    header.innerHTML+="<th>"+formatDate(d)+"</th>";
+                });
+                header.innerHTML+="<th>Action</th>";
+                table.appendChild(header);
+
+
+                // current user row
+                const row=document.createElement("tr");
+                row.innerHTML="<td>Me</td>";
+                const myVote=votes[localPeerId]||[];
+                context.dates.forEach((d,i)=>{
+                    const td=document.createElement("td");
+                    const cb=document.createElement("input");
+                    cb.type="checkbox";
+                    cb.checked=myVote.includes(i);
+                    if(votes[localPeerId]) cb.disabled=true;
+                    td.appendChild(cb);
+                    row.appendChild(td);
                 });
 
-                pollTable.appendChild(resultsRow);
+                const action=document.createElement("td");
+                if(!votes[localPeerId]){
+                    const btn=document.createElement("button");
+                    btn.innerText="Vote";
+                    btn.onclick=()=>{
+                        const selected=[];
+                        const cbs=row.querySelectorAll("input");
+                        cbs.forEach((c,i)=>{
+                            if(c.checked)selected.push(i);
+                        });
+                        sdk.emitAppEvent({
+                            vote:selected
+                        });
+                    };
+                    action.appendChild(btn);
+                }else{
+                    const btn=document.createElement("button");
+                    btn.innerText="Remove vote";
+                    btn.onclick=()=>{
+                        sdk.emitAppEvent({
+                            vote:[]
+                        });
+                    };
+                    action.appendChild(btn);
+                }
+                row.appendChild(action);
+                table.appendChild(row);
+
+
+                // results
+                const result=document.createElement("tr");
+                result.innerHTML="<td><b>Votes</b></td>";
+                context.dates.forEach((d,i)=>{
+                    let count=0;
+                    for(let u in votes){
+                        if(votes[u].includes(i))count++;
+                    }
+                    result.innerHTML+="<td><b>"+count+"</b></td>";
+                });
+                result.innerHTML+="<td></td>";
+                table.appendChild(result);
+            }
+
+            function formatDate(d){
+                const date=new Date(d);
+                return date.toLocaleString();
             }
         </script>
     </body>

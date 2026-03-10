@@ -1,3 +1,47 @@
+
+body{
+font-family:Arial;
+background:#1e1e1e;
+color:white;
+padding:20px;
+}
+
+button{
+padding:6px 10px;
+margin-top:5px;
+cursor:pointer;
+}
+
+input,select{
+padding:5px;
+margin-top:5px;
+}
+
+table{
+border-collapse:collapse;
+margin-top:20px;
+}
+
+td,th{
+border:1px solid #555;
+padding:8px;
+text-align:center;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -93,3 +137,4 @@ th {
     line-height: 1.5;
     cursor: default;
 }
+*/
