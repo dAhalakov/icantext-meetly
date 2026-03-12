@@ -75,6 +75,7 @@
 
             function startCreator(){
                 document.getElementById("standalone-info").style.display="none";
+                document.getElementById("app").style.display="block";
                 const addBtn = document.getElementById("addDateBtn");
                 const createBtn = document.getElementById("createEventBtn");
                 const datesDiv = document.getElementById("datesList");
@@ -90,7 +91,7 @@
                     datesDiv.innerHTML="";
                     dates.forEach((d,i)=>{
                     const div=document.createElement("div");
-                    div.innerHTML=d+" <button onclick='removeDate("+i+")'>X</button>";
+                    div.innerHTML=+" <button onclick='removeDate("+i+")'>X</button>";
                     datesDiv.appendChild(div);
                     });
                 }
